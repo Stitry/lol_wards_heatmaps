@@ -273,7 +273,11 @@
           });
 
     });
-
+    window.addEventListener("load", () => {
+      gameInfoDiv.textContent = "Test affichage gameInfo";
+      contactInfoDiv.textContent = "Test affichage contactInfo";
+      // Puis lancez votre fetch comme d'habitude
+    });
     // Lancer/arrêter la lecture avec la barre espace
     document.addEventListener("keydown", (event) => {
       if (event.code === "Space") {
