@@ -101,21 +101,21 @@
 
     let interval;
     let isPlaying = false;
-    // Cache des images préchargées, indexé par une clé (par exemple "red_ward")
+    // Cache des images préchargées, indexé par clé (exemple "red_all")
     const cacheImages = {};
 
-    // Fonction qui retourne le chemin d'une image en fonction du temps et des filtres
+    // Fonction pour obtenir le chemin d'une image en fonction du temps et des filtres
     function getImagePath(time, team, wardType) {
       const minutes = String(Math.floor(time / 60)).padStart(2, '0');
       const seconds = String(time % 60).padStart(2, '0');
       return `heatmap_folder/team_${team}_ward_${wardType}/heatmap_${minutes}_${seconds}.jpg`;
     }
 
-    // Fonction de préchargement complet pour un filtre donné
+    // Préchargement complet pour un filtre donné, en stockant chaque image dans un objet indexé par timestamp
     function preloadAllImages(team, wardType) {
       const totalImages = 478;
       const key = `${team}_${wardType}`;
-      cacheImages[key] = [];
+      cacheImages[key] = {}; // On utilise un objet pour stocker les images par timestamp
       preloadProgress.max = totalImages;
       preloadProgress.value = 0;
       preloadProgress.style.display = 'block'; // Affiche la barre de progression
@@ -130,25 +130,25 @@
           img.onload = () => {
             loadedCount++;
             preloadProgress.value = loadedCount;
-            resolve(img);
+            resolve({ time: t, img: img });
           };
           img.onerror = () => {
             console.error(`Erreur lors du chargement de ${imagePath}`);
             loadedCount++;
             preloadProgress.value = loadedCount;
-            resolve(null);
+            resolve({ time: t, img: null });
           };
           img.src = imagePath;
         });
         promises.push(promise);
       }
 
-      Promise.all(promises).then((images) => {
-        // On filtre les éventuels null
-        cacheImages[key] = images.filter(img => img !== null);
-        console.log(`Préchargement complet pour ${key} terminé (${cacheImages[key].length} images chargées)`);
+      Promise.all(promises).then((results) => {
+        results.forEach(result => {
+          cacheImages[key][result.time] = result.img;
+        });
+        console.log(`Préchargement complet pour ${key} terminé.`);
         preloadProgress.style.display = 'none'; // Masque la barre de progression
-        // Affiche immédiatement l'image correspondant au temps actuel, si préchargée
         updateHeatmap();
       }).catch((error) => {
         console.error("Erreur lors du préchargement complet :", error);
@@ -156,7 +156,7 @@
       });
     }
 
-    // Mise à jour de l'affichage de l'image en utilisant le cache si disponible
+    // Mise à jour de l'image affichée en utilisant le cache si disponible
     function updateHeatmap() {
       const time = parseInt(timeInput.value);
       const team = teamSelect.value;
@@ -164,14 +164,18 @@
       const key = `${team}_${wardType}`;
       const imagePath = getImagePath(time, team, wardType);
 
-      if (cacheImages[key] && cacheImages[key][time]) {
+      // Définir le gestionnaire d'erreur AVANT d'assigner le src pour éviter les boucles
+      heatmapImage.onerror = function() {
+        this.onerror = null; // désactive le gestionnaire pour éviter une récursion
+        this.src = 'heatmap_folder/heatmap_defaut.jpg';
+      };
+
+      // Si l'image préchargée pour ce timestamp existe, l'utiliser ; sinon, on assigne imagePath (le fallback se déclenchera en cas d'erreur)
+      if (cacheImages[key] && cacheImages[key][time] !== null) {
         heatmapImage.src = cacheImages[key][time].src;
       } else {
         heatmapImage.src = imagePath;
       }
-      heatmapImage.onerror = () => {
-        heatmapImage.src = 'heatmap_folder/heatmap_defaut.jpg';
-      };
     }
 
     function togglePlay() {
@@ -201,7 +205,6 @@
       updateHeatmap();
     });
 
-    // Lors du changement de filtre, précharge l'ensemble des images pour ce filtre
     teamSelect.addEventListener("change", () => {
       const team = teamSelect.value;
       const wardType = wardSelect.value;
@@ -226,7 +229,7 @@
 
     playPauseButton.addEventListener("click", togglePlay);
 
-    // Précharge le filtre par défaut au chargement de la page
+    // Précharger le filtre par défaut au chargement de la page
     window.addEventListener("load", () => {
       const team = teamSelect.value;
       const wardType = wardSelect.value;
@@ -234,10 +237,10 @@
       updateHeatmap();
     });
 
-    // Permet de lancer/arrêter la lecture avec la barre espace
+    // Lancer/arrêter la lecture avec la barre espace
     document.addEventListener("keydown", (event) => {
       if (event.code === "Space") {
-        event.preventDefault(); // Empêche le défilement de la page
+        event.preventDefault();
         togglePlay();
       }
     });
