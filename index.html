@@ -43,6 +43,19 @@
       margin-top: 10px;
       display: none; /* Masquée par défaut */
     }
+    /* Styles pour la section d'infos du jeu et le message de contact */
+    #gameInfo {
+      margin-top: 20px;
+      font-size: 0.9em;
+    }
+    #contactInfo {
+      margin-top: 10px;
+      font-size: 0.8em;
+    }
+    #contactInfo a {
+      color: #4da6ff;
+      text-decoration: none;
+    }
   </style>
 </head>
 <body>
@@ -87,6 +100,12 @@
     </select>
 
     <button id="playPauseButton">Play</button>
+
+    <!-- Section pour afficher les infos du jeu -->
+    <div id="gameInfo"></div>
+    
+    <!-- Section pour le message de contact, dont le contenu sera chargé depuis le JSON -->
+    <div id="contactInfo"></div>
   </div>
 
   <script>
@@ -98,6 +117,8 @@
     const playPauseButton = document.getElementById("playPauseButton");
     const speedSelect = document.getElementById("speedSelect");
     const preloadProgress = document.getElementById("preloadProgress");
+    const gameInfoDiv = document.getElementById("gameInfo");
+    const contactInfoDiv = document.getElementById("contactInfo");
 
     let interval;
     let isPlaying = false;
@@ -115,7 +136,7 @@
     function preloadAllImages(team, wardType) {
       const totalImages = 478;
       const key = `${team}_${wardType}`;
-      cacheImages[key] = {}; // On utilise un objet pour stocker les images par timestamp
+      cacheImages[key] = {}; // Utilisation d'un objet pour stocker les images par timestamp
       preloadProgress.max = totalImages;
       preloadProgress.value = 0;
       preloadProgress.style.display = 'block'; // Affiche la barre de progression
@@ -166,11 +187,11 @@
 
       // Définir le gestionnaire d'erreur AVANT d'assigner le src pour éviter les boucles
       heatmapImage.onerror = function() {
-        this.onerror = null; // désactive le gestionnaire pour éviter une récursion
+        this.onerror = null; // Désactive le gestionnaire pour éviter une récursion
         this.src = 'heatmap_folder/heatmap_defaut.jpg';
       };
 
-      // Si l'image préchargée pour ce timestamp existe, l'utiliser ; sinon, on assigne imagePath (le fallback se déclenchera en cas d'erreur)
+      // Utilise l'image préchargée si disponible, sinon charge directement l'image (le fallback s'activera en cas d'erreur)
       if (cacheImages[key] && cacheImages[key][time] !== null) {
         heatmapImage.src = cacheImages[key][time].src;
       } else {
@@ -229,12 +250,28 @@
 
     playPauseButton.addEventListener("click", togglePlay);
 
-    // Précharger le filtre par défaut au chargement de la page
+    // Précharger le filtre par défaut et charger le fichier JSON au chargement de la page
     window.addEventListener("load", () => {
       const team = teamSelect.value;
       const wardType = wardSelect.value;
       preloadAllImages(team, wardType);
       updateHeatmap();
+      
+      // Chargement du fichier JSON pour afficher les infos du jeu et le message de contact
+      fetch('infos.json')
+        .then(response => response.json())
+        .then(data => {
+          gameInfoDiv.innerHTML = `
+            <p>Game Version: ${data.version}</p>
+            <p>Number of Games Studied: ${data.numGames}</p>
+            <p>Rank: ${data.rank}</p>
+            <p>Last Update: ${data.lastUpdate}</p>
+          `;
+          contactInfoDiv.innerHTML = data.contactMessage;
+        })
+        .catch(error => {
+          console.error("Erreur lors du chargement des infos du jeu :", error);
+        });
     });
 
     // Lancer/arrêter la lecture avec la barre espace
