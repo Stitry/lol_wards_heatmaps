@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visualiseur de Heatmaps</title>
+  <style>
+    body {
+      background-color: #121212;
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    .container {
+      max-width: 500px;
+      margin: auto;
+    }
+    .heatmap {
+      width: 385px;
+      height: 385px;
+      background-color: #ddd;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #ccc;
+      margin: 20px auto;
+    }
+    img {
+      max-width: 100%;
+      max-height: 100%;
+    }
+    select, input, button {
+      background-color: #333;
+      color: white;
+      border: 1px solid #555;
+      margin: 5px;
+    }
+    /* Style pour la barre de progression */
+    progress {
+      width: 100%;
+      height: 20px;
+      margin-top: 10px;
+      display: none; /* Masquée par défaut */
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Visualiseur de Heatmaps</h1>
+
+    <div class="heatmap">
+      <img id="heatmapImage" src="" alt="Heatmap non disponible">
+    </div>
+
+    <!-- Barre de chargement -->
+    <progress id="preloadProgress" max="478" value="0"></progress>
+
+    <label for="timeInput">Temps (secondes) :</label>
+    <input type="number" id="timeInput" min="0" max="500" value="0">
+    <input type="range" id="timeSlider" min="0" max="500" value="0">
+
+    <br><br>
+
+    <label for="teamSelect">Team :</label>
+    <select id="teamSelect">
+      <option value="all">all</option>
+      <option value="red">red</option>
+      <option value="blue">blue</option>
+    </select>
+
+    <label for="wardSelect">Type de Ward :</label>
+    <select id="wardSelect">
+      <option value="all">all</option>
+      <option value="ward">ward</option>
+      <option value="pink">pink</option>
+    </select>
+    
+    <br><br>
+    
+    <label for="speedSelect">Vitesse :</label>
+    <select id="speedSelect">
+      <option value="5">5x</option>
+      <option value="10">10x</option>
+      <option value="15">15x</option>
+      <option value="20">20x</option>
+    </select>
+
+    <button id="playPauseButton">Play</button>
+  </div>
+
+  <script>
+    const timeInput = document.getElementById("timeInput");
+    const timeSlider = document.getElementById("timeSlider");
+    const teamSelect = document.getElementById("teamSelect");
+    const wardSelect = document.getElementById("wardSelect");
+    const heatmapImage = document.getElementById("heatmapImage");
+    const playPauseButton = document.getElementById("playPauseButton");
+    const speedSelect = document.getElementById("speedSelect");
+    const preloadProgress = document.getElementById("preloadProgress");
+
+    let interval;
+    let isPlaying = false;
+    // Cache des images préchargées, indexé par une clé (par exemple "red_ward")
+    const cacheImages = {};
+
+    // Fonction qui retourne le chemin d'une image en fonction du temps et des filtres
+    function getImagePath(time, team, wardType) {
+      const minutes = String(Math.floor(time / 60)).padStart(2, '0');
+      const seconds = String(time % 60).padStart(2, '0');
+      return `heatmap_folder/team_${team}_ward_${wardType}/heatmap_${minutes}_${seconds}.jpg`;
+    }
+
+    // Fonction de préchargement complet pour un filtre donné
+    function preloadAllImages(team, wardType) {
+      const totalImages = 478;
+      const key = `${team}_${wardType}`;
+      cacheImages[key] = [];
+      preloadProgress.max = totalImages;
+      preloadProgress.value = 0;
+      preloadProgress.style.display = 'block'; // Affiche la barre de progression
+
+      let loadedCount = 0;
+      const promises = [];
+
+      for (let t = 0; t < totalImages; t++) {
+        const imagePath = getImagePath(t, team, wardType);
+        const promise = new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            loadedCount++;
+            preloadProgress.value = loadedCount;
+            resolve(img);
+          };
+          img.onerror = () => {
+            console.error(`Erreur lors du chargement de ${imagePath}`);
+            loadedCount++;
+            preloadProgress.value = loadedCount;
+            resolve(null);
+          };
+          img.src = imagePath;
+        });
+        promises.push(promise);
+      }
+
+      Promise.all(promises).then((images) => {
+        // On filtre les éventuels null
+        cacheImages[key] = images.filter(img => img !== null);
+        console.log(`Préchargement complet pour ${key} terminé (${cacheImages[key].length} images chargées)`);
+        preloadProgress.style.display = 'none'; // Masque la barre de progression
+        // Affiche immédiatement l'image correspondant au temps actuel, si préchargée
+        updateHeatmap();
+      }).catch((error) => {
+        console.error("Erreur lors du préchargement complet :", error);
+        preloadProgress.style.display = 'none';
+      });
+    }
+
+    // Mise à jour de l'affichage de l'image en utilisant le cache si disponible
+    function updateHeatmap() {
+      const time = parseInt(timeInput.value);
+      const team = teamSelect.value;
+      const wardType = wardSelect.value;
+      const key = `${team}_${wardType}`;
+      const imagePath = getImagePath(time, team, wardType);
+
+      if (cacheImages[key] && cacheImages[key][time]) {
+        heatmapImage.src = cacheImages[key][time].src;
+      } else {
+        heatmapImage.src = imagePath;
+      }
+      heatmapImage.onerror = () => {
+        heatmapImage.src = 'heatmap_folder/heatmap_defaut.jpg';
+      };
+    }
+
+    function togglePlay() {
+      if (isPlaying) {
+        clearInterval(interval);
+        playPauseButton.textContent = "Play";
+      } else {
+        interval = setInterval(() => {
+          let newTime = parseInt(timeInput.value) + 1;
+          if (newTime > 500) newTime = 0;
+          timeInput.value = newTime;
+          timeSlider.value = newTime;
+          updateHeatmap();
+        }, 1000 / parseFloat(speedSelect.value));
+        playPauseButton.textContent = "Pause";
+      }
+      isPlaying = !isPlaying;
+    }
+
+    timeInput.addEventListener("input", () => {
+      timeSlider.value = timeInput.value;
+      updateHeatmap();
+    });
+
+    timeSlider.addEventListener("input", () => {
+      timeInput.value = timeSlider.value;
+      updateHeatmap();
+    });
+
+    // Lors du changement de filtre, précharge l'ensemble des images pour ce filtre
+    teamSelect.addEventListener("change", () => {
+      const team = teamSelect.value;
+      const wardType = wardSelect.value;
+      preloadAllImages(team, wardType);
+      updateHeatmap();
+    });
+
+    wardSelect.addEventListener("change", () => {
+      const team = teamSelect.value;
+      const wardType = wardSelect.value;
+      preloadAllImages(team, wardType);
+      updateHeatmap();
+    });
+
+    speedSelect.addEventListener("change", () => {
+      if (isPlaying) {
+        clearInterval(interval);
+        togglePlay();
+        togglePlay();
+      }
+    });
+
+    playPauseButton.addEventListener("click", togglePlay);
+
+    // Précharge le filtre par défaut au chargement de la page
+    window.addEventListener("load", () => {
+      const team = teamSelect.value;
+      const wardType = wardSelect.value;
+      preloadAllImages(team, wardType);
+      updateHeatmap();
+    });
+
+    // Permet de lancer/arrêter la lecture avec la barre espace
+    document.addEventListener("keydown", (event) => {
+      if (event.code === "Space") {
+        event.preventDefault(); // Empêche le défilement de la page
+        togglePlay();
+      }
+    });
+  </script>
+</body>
+</html>
