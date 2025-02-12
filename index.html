@@ -67,9 +67,11 @@
     <!-- Progress Bar -->
     <progress id="preloadProgress" max="478" value="0"></progress>
 
+    <!-- Contrôles du timer -->
     <label for="timeInput">Time (seconds):</label>
-    <input type="number" id="timeInput" min="0" max="500" value="0">
-    <input type="range" id="timeSlider" min="0" max="500" value="0">
+    <input type="number" id="timeInput" min="0" max="475" value="0">
+    <input type="range" id="timeSlider" min="0" max="475" value="0">
+    <span id="timeDisplay">00:00</span>
 
     <br><br>
 
@@ -109,6 +111,7 @@
   <script>
     const timeInput = document.getElementById("timeInput");
     const timeSlider = document.getElementById("timeSlider");
+    const timeDisplay = document.getElementById("timeDisplay");
     const teamSelect = document.getElementById("teamSelect");
     const wardSelect = document.getElementById("wardSelect");
     const heatmapImage = document.getElementById("heatmapImage");
@@ -120,24 +123,31 @@
 
     let interval;
     let isPlaying = false;
-    // Cache for preloaded images, indexed by key (e.g., "red_all")
+    // Cache pour les images préchargées, indexé par une clé (ex: "red_all")
     const cacheImages = {};
 
-    // Function to obtain the image path based on time and filters
+    // Fonction pour obtenir le chemin de l'image en fonction du temps et des filtres
     function getImagePath(time, team, wardType) {
       const minutes = String(Math.floor(time / 60)).padStart(2, '0');
       const seconds = String(time % 60).padStart(2, '0');
       return `heatmap_folder/team_${team}_ward_${wardType}/heatmap_${minutes}_${seconds}.jpg`;
     }
 
-    // Preload all images for a given filter, storing each image in an object indexed by timestamp
+    // Fonction de formatage du temps en mm:ss
+    function formatTime(seconds) {
+      const minutes = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return minutes.toString().padStart(2, '0') + ":" + secs.toString().padStart(2, '0');
+    }
+
+    // Précharger toutes les images pour un filtre donné
     function preloadAllImages(team, wardType) {
       const totalImages = 478;
       const key = `${team}_${wardType}`;
-      cacheImages[key] = {}; // Using an object to store images by timestamp
+      cacheImages[key] = {}; // Utilisation d'un objet pour stocker les images par timestamp
       preloadProgress.max = totalImages;
       preloadProgress.value = 0;
-      preloadProgress.style.display = 'block'; // Show the progress bar
+      preloadProgress.style.display = 'block'; // Afficher la barre de progression
 
       let loadedCount = 0;
       const promises = [];
@@ -152,7 +162,7 @@
             resolve({ time: t, img: img });
           };
           img.onerror = () => {
-            // Missing images are not considered errors: no error is logged.
+            // Les images manquantes ne sont pas considérées comme des erreurs.
             loadedCount++;
             preloadProgress.value = loadedCount;
             resolve({ time: t, img: null });
@@ -166,7 +176,7 @@
         results.forEach(result => {
           cacheImages[key][result.time] = result.img;
         });
-        preloadProgress.style.display = 'none'; // Hide the progress bar
+        preloadProgress.style.display = 'none'; // Cacher la barre de progression
         updateHeatmap();
       }).catch((error) => {
         console.error("Error during image preloading:", error);
@@ -174,21 +184,25 @@
       });
     }
 
-    // Update the displayed image using the cache if available
+    // Met à jour l'image affichée et le timer en mm:ss
     function updateHeatmap() {
-      const time = parseInt(timeInput.value);
+      const time = parseInt(timeInput.value, 10);
+      
+      // Mise à jour de l'affichage du temps en format mm:ss
+      timeDisplay.textContent = formatTime(time);
+      
       const team = teamSelect.value;
       const wardType = wardSelect.value;
       const key = `${team}_${wardType}`;
       const imagePath = getImagePath(time, team, wardType);
 
-      // Set the error handler BEFORE assigning src to avoid loops
+      // Définir le gestionnaire d'erreur AVANT d'assigner la src
       heatmapImage.onerror = function() {
-        this.onerror = null; // Disable handler to prevent recursion
+        this.onerror = null; // Désactive le handler pour éviter une récursion
         this.src = 'heatmap_folder/heatmap_defaut.jpg';
       };
 
-      // Use the preloaded image if available, otherwise load directly (fallback will activate on error)
+      // Utiliser l'image préchargée si disponible, sinon charger directement
       if (cacheImages[key] && cacheImages[key][time] !== null) {
         heatmapImage.src = cacheImages[key][time].src;
       } else {
@@ -202,7 +216,7 @@
         playPauseButton.textContent = "Play";
       } else {
         interval = setInterval(() => {
-          let newTime = parseInt(timeInput.value) + 1;
+          let newTime = parseInt(timeInput.value, 10) + 1;
           if (newTime > 500) newTime = 0;
           timeInput.value = newTime;
           timeSlider.value = newTime;
@@ -247,11 +261,11 @@
 
     playPauseButton.addEventListener("click", togglePlay);
 
-    // Load JSON and configure the spacebar listener
+    // Chargement du JSON et configuration de l'écouteur pour la barre d'espace
     window.addEventListener("load", () => {
       console.log("Load event triggered");
 
-      // First, fetch the JSON
+      // Récupération du JSON
       fetch('infos.json')
         .then(response => response.json())
         .then(data => {
@@ -266,7 +280,7 @@
           <br>`;
           contactInfoDiv.innerHTML = data.contactMessage;
 
-          // Once the JSON is loaded, start preloading images
+          // Une fois le JSON chargé, démarrer le préchargement des images
           const team = teamSelect.value;
           const wardType = wardSelect.value;
           preloadAllImages(team, wardType);
@@ -274,14 +288,14 @@
         })
         .catch(error => {
           console.error("Error loading JSON data:", error);
-          // Even if there's an error, start preloading images to avoid blocking the app
+          // En cas d'erreur, démarrer quand même le préchargement pour ne pas bloquer l'app
           const team = teamSelect.value;
           const wardType = wardSelect.value;
           preloadAllImages(team, wardType);
           updateHeatmap();
         });
       
-      // Spacebar listener
+      // Écouteur pour la barre d'espace
       document.addEventListener("keydown", (event) => {
         if (event.code === "Space") {
           event.preventDefault();
