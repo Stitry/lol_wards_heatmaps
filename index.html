@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Visualiseur de Heatmaps</title>
+  <title>Heatmap Viewer</title>
   <style>
     body {
       background-color: #121212;
@@ -58,29 +58,29 @@
 </head>
 <body>
   <div class="container">
-    <h1>Visualiseur de Heatmaps</h1>
+    <h1>Heatmap Viewer</h1>
 
     <div class="heatmap">
-      <img id="heatmapImage" src="" alt="Heatmap non disponible">
+      <img id="heatmapImage" src="" alt="Heatmap not available">
     </div>
 
-    <!-- Barre de chargement -->
+    <!-- Progress Bar -->
     <progress id="preloadProgress" max="478" value="0"></progress>
 
-    <label for="timeInput">Temps (secondes) :</label>
+    <label for="timeInput">Time (seconds):</label>
     <input type="number" id="timeInput" min="0" max="500" value="0">
     <input type="range" id="timeSlider" min="0" max="500" value="0">
 
     <br><br>
 
-    <label for="teamSelect">Team :</label>
+    <label for="teamSelect">Team:</label>
     <select id="teamSelect">
       <option value="all">all</option>
       <option value="red">red</option>
       <option value="blue">blue</option>
     </select>
 
-    <label for="wardSelect">Type de Ward :</label>
+    <label for="wardSelect">Ward Type:</label>
     <select id="wardSelect">
       <option value="all">all</option>
       <option value="ward">ward</option>
@@ -89,7 +89,7 @@
     
     <br><br>
     
-    <label for="speedSelect">Vitesse :</label>
+    <label for="speedSelect">Speed:</label>
     <select id="speedSelect">
       <option value="5">5x</option>
       <option value="10">10x</option>
@@ -99,10 +99,10 @@
 
     <button id="playPauseButton">Play</button>
 
-    <!-- Section pour afficher les infos du jeu -->
+    <!-- Section to display game info -->
     <div id="gameInfo"></div>
     
-    <!-- Section pour le message de contact, dont le contenu sera chargé depuis le JSON -->
+    <!-- Section for the contact message (loaded from JSON) -->
     <div id="contactInfo"></div>
   </div>
 
@@ -120,24 +120,24 @@
 
     let interval;
     let isPlaying = false;
-    // Cache des images préchargées, indexé par clé (exemple "red_all")
+    // Cache for preloaded images, indexed by key (e.g., "red_all")
     const cacheImages = {};
 
-    // Fonction pour obtenir le chemin d'une image en fonction du temps et des filtres
+    // Function to obtain the image path based on time and filters
     function getImagePath(time, team, wardType) {
       const minutes = String(Math.floor(time / 60)).padStart(2, '0');
       const seconds = String(time % 60).padStart(2, '0');
       return `heatmap_folder/team_${team}_ward_${wardType}/heatmap_${minutes}_${seconds}.jpg`;
     }
 
-    // Préchargement complet pour un filtre donné, en stockant chaque image dans un objet indexé par timestamp
+    // Preload all images for a given filter, storing each image in an object indexed by timestamp
     function preloadAllImages(team, wardType) {
       const totalImages = 478;
       const key = `${team}_${wardType}`;
-      cacheImages[key] = {}; // Utilisation d'un objet pour stocker les images par timestamp
+      cacheImages[key] = {}; // Using an object to store images by timestamp
       preloadProgress.max = totalImages;
       preloadProgress.value = 0;
-      preloadProgress.style.display = 'block'; // Affiche la barre de progression
+      preloadProgress.style.display = 'block'; // Show the progress bar
 
       let loadedCount = 0;
       const promises = [];
@@ -152,7 +152,7 @@
             resolve({ time: t, img: img });
           };
           img.onerror = () => {
-            // Les images manquantes ne sont pas considérées comme des erreurs : on ne log pas d'erreur.
+            // Missing images are not considered errors: no error is logged.
             loadedCount++;
             preloadProgress.value = loadedCount;
             resolve({ time: t, img: null });
@@ -166,15 +166,15 @@
         results.forEach(result => {
           cacheImages[key][result.time] = result.img;
         });
-        preloadProgress.style.display = 'none'; // Masque la barre de progression
+        preloadProgress.style.display = 'none'; // Hide the progress bar
         updateHeatmap();
       }).catch((error) => {
-        console.error("Erreur lors du préchargement complet :", error);
+        console.error("Error during image preloading:", error);
         preloadProgress.style.display = 'none';
       });
     }
 
-    // Mise à jour de l'image affichée en utilisant le cache si disponible
+    // Update the displayed image using the cache if available
     function updateHeatmap() {
       const time = parseInt(timeInput.value);
       const team = teamSelect.value;
@@ -182,13 +182,13 @@
       const key = `${team}_${wardType}`;
       const imagePath = getImagePath(time, team, wardType);
 
-      // Définir le gestionnaire d'erreur AVANT d'assigner le src pour éviter les boucles
+      // Set the error handler BEFORE assigning src to avoid loops
       heatmapImage.onerror = function() {
-        this.onerror = null; // Désactive le gestionnaire pour éviter une récursion
+        this.onerror = null; // Disable handler to prevent recursion
         this.src = 'heatmap_folder/heatmap_defaut.jpg';
       };
 
-      // Utilise l'image préchargée si disponible, sinon charge directement l'image (le fallback s'activera en cas d'erreur)
+      // Use the preloaded image if available, otherwise load directly (fallback will activate on error)
       if (cacheImages[key] && cacheImages[key][time] !== null) {
         heatmapImage.src = cacheImages[key][time].src;
       } else {
@@ -247,30 +247,41 @@
 
     playPauseButton.addEventListener("click", togglePlay);
 
-    // Chargement du fichier JSON et configuration de l'écouteur de la barre espace
+    // Load JSON and configure the spacebar listener
     window.addEventListener("load", () => {
-      console.log("Événement load déclenché");
-      // const team = teamSelect.value;
-      // const wardType = wardSelect.value;
-      // preloadAllImages(team, wardType);
-      // updateHeatmap();
-      
+      console.log("Load event triggered");
+
+      // First, fetch the JSON
       fetch('infos.json')
         .then(response => response.json())
         .then(data => {
-          console.log("Données JSON reçues :", data);
-          gameInfoDiv.innerHTML = `
-            <p>Game Version: ${data.version}</p>
-            <p>Number of Games Studied: ${data.numGames}</p>
-            <p>Rank: ${data.rank}</p>
-            <p>Last Update: ${data.lastUpdate}</p>
-          `;
+          console.log("JSON Data received:", data);
+          gameInfoDiv.innerHTML = `<br>
+            <div style="line-height: 1.2; margin: 0.5em 0;">
+              <p>Game Version: ${data.version}</p>
+              <p>Number of Games Studied: ${data.numGames}</p>
+              <p>Rank: ${data.rank}</p>
+              <p>Last Update: ${data.lastUpdate}</p>
+            </div>
+          <br>`;
           contactInfoDiv.innerHTML = data.contactMessage;
+
+          // Once the JSON is loaded, start preloading images
+          const team = teamSelect.value;
+          const wardType = wardSelect.value;
+          preloadAllImages(team, wardType);
+          updateHeatmap();
         })
         .catch(error => {
-          console.error("Erreur lors du chargement des infos du jeu :", error);
+          console.error("Error loading JSON data:", error);
+          // Even if there's an error, start preloading images to avoid blocking the app
+          const team = teamSelect.value;
+          const wardType = wardSelect.value;
+          preloadAllImages(team, wardType);
+          updateHeatmap();
         });
       
+      // Spacebar listener
       document.addEventListener("keydown", (event) => {
         if (event.code === "Space") {
           event.preventDefault();
