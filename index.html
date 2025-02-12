@@ -247,37 +247,30 @@
 
     playPauseButton.addEventListener("click", togglePlay);
 
-    // Précharger le filtre par défaut et charger le fichier JSON au chargement de la page
-    window.addEventListener("load", () => {
-      const team = teamSelect.value;
-      const wardType = wardSelect.value;
-      preloadAllImages(team, wardType);
-      updateHeatmap();
-      
-      // Chargement du fichier JSON pour afficher les infos du jeu et le message de contact
-      console.log("La page est chargée, lancement du fetch pour infos.json");
-        fetch('infos.json')
-          .then(response => response.json())
-          .then(data => {
-            console.log("Données JSON reçues :", data);
-            gameInfoDiv.innerHTML = `
-              <p>Game Version: ${data.version}</p>
-              <p>Number of Games Studied: ${data.numGames}</p>
-              <p>Rank: ${data.rank}</p>
-              <p>Last Update: ${data.lastUpdate}</p>
-            `;
-            contactInfoDiv.innerHTML = data.contactMessage;
-          })
-          .catch(error => {
-            console.error("Erreur lors du chargement des infos du jeu :", error);
-          });
+  // Chargement du fichier JSON et configuration de l'écouteur de la barre espace
+  window.addEventListener("load", () => {
+    const team = teamSelect.value;
+    const wardType = wardSelect.value;
+    preloadAllImages(team, wardType);
+    updateHeatmap();
+    
+    // Chargement du fichier JSON pour afficher les infos du jeu et le message de contact
+    fetch('infos.json')
+      .then(response => response.json())
+      .then(data => {
+        console.log("Données JSON reçues :", data);
+        gameInfoDiv.innerHTML = `
+          <p>Game Version: ${data.version}</p>
+          <p>Number of Games Studied: ${data.numGames}</p>
+          <p>Rank: ${data.rank}</p>
+          <p>Last Update: ${data.lastUpdate}</p>
+        `;
+        contactInfoDiv.innerHTML = data.contactMessage;
+      })
+      .catch(error => {
+        console.error("Erreur lors du chargement des infos du jeu :", error);
+      });
 
-    });
-    window.addEventListener("load", () => {
-      gameInfoDiv.textContent = "Test affichage gameInfo";
-      contactInfoDiv.textContent = "Test affichage contactInfo";
-      // Puis lancez votre fetch comme d'habitude
-    });
     // Lancer/arrêter la lecture avec la barre espace
     document.addEventListener("keydown", (event) => {
       if (event.code === "Space") {
@@ -285,6 +278,7 @@
         togglePlay();
       }
     });
+  });  // Assurez-vous de fermer correctement le callback du "load"
   </script>
 </body>
 </html>
