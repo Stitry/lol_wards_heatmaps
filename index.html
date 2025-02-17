@@ -54,6 +54,10 @@
       color: #4da6ff;
       text-decoration: none;
     }
+    /* Style sobre pour le compteur de visites */
+    #visitorCounter {
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
@@ -109,6 +113,13 @@
     
     <!-- Section for the contact message (loaded from JSON) -->
     <div id="contactInfo"></div>
+  </div>
+
+  <!-- Compteur de visites HitWebCounter (uniquement le nombre, sans texte supplémentaire) -->
+  <div id="visitorCounter" style="text-align: center;">
+    <a href="https://www.hitwebcounter.com" target="_blank">
+      <img src="https://hitwebcounter.com/counter/counter.php?page=heatmapViewer&style=0006&nbdigits=5&type=page&initCount=1053" alt="">
+    </a>
   </div>
 
   <script>
