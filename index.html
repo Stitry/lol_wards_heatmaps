@@ -133,7 +133,7 @@
     function getImagePath(time, team, wardType) {
       const minutes = String(Math.floor(time / 60)).padStart(2, '0');
       const seconds = String(time % 60).padStart(2, '0');
-      return `heatmap_folder/team_${team}_ward_${wardType}/heatmap_${minutes}_${seconds}.jpg`;
+      return `heatmap_folder/team_${team}_ward_${wardType}/heatmap_${minutes}_${seconds}.png`;
     }
 
     // Fonction de formatage du temps en mm:ss
