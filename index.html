@@ -16,6 +16,25 @@
       max-width: 700px;
       margin: auto;
     }
+    #videosLink {
+      margin: 20px 0 15px 0;
+    }
+    #videosLink a {
+      display: inline-block;
+      font-size: 1.6em;
+      font-weight: bold;
+      color: #ffd54a;
+      text-decoration: none;
+      background: #1f1f1f;
+      border: 2px solid #ffd54a;
+      border-radius: 10px;
+      padding: 12px 20px;
+      box-shadow: 0 0 10px rgba(255, 213, 74, 0.25);
+    }
+    #videosLink a:hover {
+      background: #2a2a2a;
+      text-decoration: underline;
+    }
     .heatmap {
       width: 700px;
       height: 700px;
@@ -63,6 +82,12 @@
 <body>
   <div class="container">
     <h1>Heatmap Viewer</h1>
+
+    <div id="videosLink">
+      <a href="https://www.youtube.com/watch?v=ZW7JnkgnmcQ&list=PLLbkjarDDZfYYMBKXjroF5-AVYoQtIii3" target="_blank" rel="noopener noreferrer">
+        ▶ Watch all heatmap videos (all ranks)
+      </a>
+    </div>
 
     <div class="heatmap">
       <img id="heatmapImage" src="" alt="Heatmap not available">
